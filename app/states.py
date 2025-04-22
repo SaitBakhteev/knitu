@@ -57,3 +57,12 @@ class CreateQuestionFSM(StatesGroup):
 
 class QuizFSM(StatesGroup):
     continue_quiz = State()
+
+class MetrologyFSM(StatesGroup):
+    reliability = State()
+    measurements = State()
+
+
+class SubstanceFSM(StatesGroup):
+    density = State()
+    finish = State()
