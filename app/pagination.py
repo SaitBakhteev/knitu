@@ -31,7 +31,6 @@ async def kb_test():
 для каких цедей используется вызываемая функция. Если для опроса, то только кнопка
 "Далее", если для пагинации объектов, то соответствующая панель пагинации  """
 
-
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -42,7 +41,9 @@ from aiogram.types import CallbackQuery
 
 from aiogram.fsm.context import FSMContext
 from aiogram.filters.callback_data import CallbackData
+
 import logging
+
 loger = logging.getLogger(__name__)
 
 
@@ -57,6 +58,7 @@ class PaginationCallbackData(CallbackData, prefix='pagination'):
 
 # Формирование панели кнопок для пагинации
 async def get_pagination_keyboard(service_pagination: bool=True,
+                                  delete: bool=True, delete_text: str = 'Удалить',
                                   **kwargs) -> InlineKeyboardMarkup:
 
     prefix, current_index, total_count, apply_text =\
@@ -91,9 +93,8 @@ async def get_pagination_keyboard(service_pagination: bool=True,
 
     if service_pagination:
         keyboard.button(text=f'{apply_text}', callback_data=f'apply_{prefix}')
-    else:
-        # keyboard.add(InlineKeyboardButton(text='Удалить', callback_data=f'delete_{text}_{current_index}'))
-        keyboard.add(InlineKeyboardButton(text='Удалить', callback_data=f'delete_{prefix}'))
+    if delete:
+        keyboard.add(InlineKeyboardButton(text=f'{delete_text}', callback_data=f'delete_{prefix}'))
     keyboard.adjust(3) if current_index > 0 and current_index < total_count - 1\
         else keyboard.adjust(2)
     return keyboard.as_markup()
@@ -101,7 +102,7 @@ async def get_pagination_keyboard(service_pagination: bool=True,
 
 # Универсальная функция пользователького вывода панели инструментов пагинации
 async def show_object(message: Message, **kwargs):
-    await message.delete()
+    # await message.delete()
 
     object_info = kwargs['object_info']
     image_path = kwargs['image_path'] if 'image_path' in kwargs else None
@@ -140,10 +141,13 @@ async def pagination_handler(callback_query: CallbackQuery,
 
             # Чтение значения текущего индекса перебираемого объекта
         data = await state.get_data()
+        print(143)
         current_index, total_count, object_list =\
             (data.get('current_index'), data.get('total_count'),
              data.get(f'{prefix}_list'))
-
+        print(f'current_index = {current_index}\n'
+              f'total_count = {total_count}\n'
+              f'object_list = {object_list}\n')
         new_index = current_index - 1 if direction == "prev" else current_index + 1
         current_index = new_index  # обновляем значение текущего индекса
 
@@ -163,6 +167,8 @@ async def pagination_handler(callback_query: CallbackQuery,
         image_path = answers_list = None
         if prefix == 'category':
             await state.update_data(category_id=object_id)
+        elif prefix == 'admin':
+            await state.update_data(admin_id=object_id)
         elif prefix == 'animal':
             await state.update_data(animal=object_info)
         elif prefix == 'quiz':
@@ -178,15 +184,6 @@ async def pagination_handler(callback_query: CallbackQuery,
                               current_index=current_index,
                               total_count=total_count,
                               **kwargs)
-        else:
-            await show_object(callback_query.message,
-                              object_info=object_info,
-                              current_index=current_index,
-                              total_count=total_count,
-                              answers_list=answers_list,
-                              image_path=image_path,
-                              **kwargs)
-
 
         # Убираем уведомление о нажатии кнопки
         await callback_query.answer()

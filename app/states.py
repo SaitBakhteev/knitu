@@ -1,6 +1,11 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
+class CreateSpecialization(StatesGroup):
+    department = State()
+    specialization = State()
+
+
 class CreateAutoFSM(StatesGroup):
     user = State()
     brand = State()
@@ -66,3 +71,9 @@ class MetrologyFSM(StatesGroup):
 class SubstanceFSM(StatesGroup):
     density = State()
     finish = State()
+
+
+class EditAdmin(StatesGroup):
+    choose_admin = State()
+    add_admin = State()
+    delete_admin = State()

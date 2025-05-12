@@ -59,6 +59,13 @@ STUDENT_CF = {
     },
 }
 
+DEPARTMENT = [('ХТПНГ','HTPNG'),
+              ('ТООНС','TOONS'),
+              ('АХСМК','AHSMK'),
+              ('ОХТ','OHT'),
+              ('ТНВ','TNV'),]
+
+
 '''Данные зависимости % от плотности. Коэффициенты линейной зависимости представлены
 для диапазона плотностей 1-1.2'''
 
@@ -87,29 +94,29 @@ TRAINING_TYPES = [('🏀', 'Баскетбол'),
 
 # config.py for MySQL
 
-TORTOISE_ORM = {
-    "connections": {
-        "default": {
-            "engine": "tortoise.backends.mysql",
-            "credentials": {
-                "host": DB_HOST,
-                "port": DB_PORT,
-                "user": DB_USER,
-                "password": DB_PASS,
-                "database": DB_NAME,
-                "minsize": 1,
-                "maxsize": 5,
-                "sql_mode": "STRICT_TRANS_TABLES"
-            },
-        }
-    },
-    "apps": {
-        "models": {
-            "models": ["app.database.models", "aerich.models"],
-            "default_connection": "default",
-        }
-    },
-}
+# TORTOISE_ORM = {
+#     "connections": {
+#         "default": {
+#             "engine": "tortoise.backends.mysql",
+#             "credentials": {
+#                 "host": DB_HOST,
+#                 "port": DB_PORT,
+#                 "user": DB_USER,
+#                 "password": DB_PASS,
+#                 "database": DB_NAME,
+#                 "minsize": 1,
+#                 "maxsize": 5,
+#                 "sql_mode": "STRICT_TRANS_TABLES"
+#             },
+#         }
+#     },
+#     "apps": {
+#         "models": {
+#             "models": ["app.database.models", "aerich.models"],
+#             "default_connection": "default",
+#         }
+#     },
+# }
 #
 #
 # # postgres
@@ -145,17 +152,17 @@ TORTOISE_ORM = {
 # #
 # #
 # # # # sqlite
-# # # TORTOISE_ORM = {
-# # #     "connections": {
-# # #         "default": DB_URL,
-# # #     },
-# # #     "apps": {
-# # #         "models": {
-# # #             "models": ["app.database.models", "aerich.models"],
-# # #             "default_connection": "default",
-# # #         },
-# # #     },
-# # # }
+TORTOISE_ORM = {
+    "connections": {
+        "default": DB_URL,
+    },
+    "apps": {
+        "models": {
+            "models": ["app.database.models", "aerich.models"],
+            "default_connection": "default",
+        },
+    },
+}
 # #
 # #
 #
