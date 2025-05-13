@@ -261,6 +261,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+plan.pptx
 .env
 .venv
 env/
@@ -400,3 +401,4 @@ media/
 migrations/
 start.sh
 problems_and_tasks
+check.py

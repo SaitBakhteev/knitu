@@ -11,7 +11,9 @@ from apscheduler.triggers.cron import CronTrigger
 from tortoise import Tortoise, connections
 from tortoise.exceptions import DBConnectionError, OperationalError
 
-from app.user.user_queries import user #, user_cache
+from app.database.requests import get_all_users
+from app.user.user_queries import user, user_cache  # , user_cache
+from app.administrator.admin_queries import adm, global_caches_managment
 # from app.database.requests import get_all_users
 
 from config import TOKEN, TORTOISE_ORM
@@ -69,22 +71,25 @@ async def connect_to_db():
                 await asyncio.sleep(delay)
         logger.error("Failed to connect to database after multiple attempts")
         return False
-
-
+#
+#
 async def startup(dispatcher: Dispatcher):
     try:
         if not await connect_to_db():
             raise RuntimeError
+        await global_caches_managment()
 
-        # # Формирование user_cache
-        # users = await get_all_users()
-        # for user in users:
-        #     user_cache[user.tg_id] = user
+        # Формирование user_cache
+        users = await get_all_users()
+        for user in users:
+            user_cache[user.tg_id] = user
+        await global_caches_managment()
+#         scheduler = AsyncIOScheduler()
+#         # scheduler.add_job(delete_events, CronTrigger(hour=1, minute=58))
+#         # scheduler.add_job(update, CronTrigger(hour=2, minute=0))
+#         scheduler.start()
 
-        scheduler = AsyncIOScheduler()
-        # scheduler.add_job(delete_events, CronTrigger(hour=1, minute=58))
-        # scheduler.add_job(update, CronTrigger(hour=2, minute=0))
-        scheduler.start()
+
         logger.info("Starting Bot...")
     except RuntimeError as e:
         logger.error(f"On startup: {e}")
@@ -92,16 +97,16 @@ async def startup(dispatcher: Dispatcher):
         logger.error(f"ERROR_on_Starting Bot...: {e}")
 
 
-async def shutdown(dispatcher: Dispatcher):
-    await Tortoise.close_connections()
-    exit(0)
+# async def shutdown(dispatcher: Dispatcher):
+#     await Tortoise.close_connections()
+#     exit(0)
 
 
 async def main():
     dp = Dispatcher()
-    dp.include_router(user)
+    dp.include_routers(user, adm)
     dp.startup.register(startup)
-    dp.shutdown.register(shutdown)
+    # dp.shutdown.register(shutdown)
 
     await dp.start_polling(bot)
 
