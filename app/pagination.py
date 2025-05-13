@@ -47,13 +47,15 @@ import logging
 loger = logging.getLogger(__name__)
 
 
+# Клавиатура для добавления первого объекта пагинации
+add_first_object_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='Добавить первого админа', callback_data='add_first_admin')]
+])
+
+
 # Классы для отлова вызовов после нажатия кнопки
 class PaginationCallbackData(CallbackData, prefix='pagination'):
     call_prefix: str
-
-
-# class PaginationQuestionsOnQuiz(CallbackData, prefix='quiz'):
-#     call_prefix: str
 
 
 # Формирование панели кнопок для пагинации
@@ -102,8 +104,6 @@ async def get_pagination_keyboard(service_pagination: bool=True,
 
 # Универсальная функция пользователького вывода панели инструментов пагинации
 async def show_object(message: Message, **kwargs):
-    # await message.delete()
-
     object_info = kwargs['object_info']
     image_path = kwargs['image_path'] if 'image_path' in kwargs else None
     answers_list = kwargs['answers_list'] if 'answers_list' in kwargs else None
@@ -125,6 +125,7 @@ async def show_object(message: Message, **kwargs):
             keyboard = await get_pagination_keyboard(**kwargs)
             await message.answer(f'<b>{object_info}</b>',
                                  reply_markup=keyboard, parse_mode='HTML')
+
     except Exception as e:
         loger.error(f'Ошибка модуля show_object: {e}')
 
@@ -141,7 +142,6 @@ async def pagination_handler(callback_query: CallbackQuery,
 
             # Чтение значения текущего индекса перебираемого объекта
         data = await state.get_data()
-        print(143)
         current_index, total_count, object_list =\
             (data.get('current_index'), data.get('total_count'),
              data.get(f'{prefix}_list'))

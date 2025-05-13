@@ -97,9 +97,9 @@ async def startup(dispatcher: Dispatcher):
         logger.error(f"ERROR_on_Starting Bot...: {e}")
 
 
-# async def shutdown(dispatcher: Dispatcher):
-#     await Tortoise.close_connections()
-#     exit(0)
+async def shutdown(dispatcher: Dispatcher):
+    await Tortoise.close_connections()
+    exit(0)
 
 
 async def main():

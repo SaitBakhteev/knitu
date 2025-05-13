@@ -160,22 +160,50 @@ async def admin_list(call_mess: CallbackQuery | Message, state: FSMContext):
     call_mess = call_mess.message if isinstance(call_mess, CallbackQuery) else call_mess
     async def inner_admin_list():
         admin_spec = await db_req.get_admins()  # все записи UserSpecialization
-        admin_list = [{'admin_id': item.id,  # на самом деле это id записи UserSpecialization
-                       'admin_info': f'Админ: <b>{item.user.full_name}</b>\n'
-                                     f' Специальность: <i>{item.specialization.title}</i>\n'
-                                     f' Кафедра: <i>{item.specialization.department}</i>'}
-                      for item in admin_spec]
-        admin_id, admin_info, admin_count,  = admin_list[0]['admin_id'],  admin_list[0]['admin_info'], len(admin_list)
+        if admin_spec:
+            admin_list = [{'admin_id': item.id,  # на самом деле это id записи UserSpecialization
+                           'admin_info': f'Админ: <b>{item.user.full_name}</b>\n'
+                                         f' Специальность: <i>{item.specialization.title}</i>\n'
+                                         f' Кафедра: <i>{item.specialization.department}</i>'}
+                          for item in admin_spec]
+            admin_id, admin_info, admin_count,  = admin_list[0]['admin_id'],  admin_list[0]['admin_info'], len(admin_list)
 
-        await state.update_data(admin_list=admin_list, current_index=0,
-                                total_count=admin_count, admin_id=admin_id)
-        await state.set_state(st.EditAdmin.choose_admin)
+            await state.update_data(admin_list=admin_list, current_index=0,
+                                    total_count=admin_count, admin_id=admin_id)
+            await state.set_state(st.EditAdmin.choose_admin)
 
-        await show_object(call_mess, object_info=admin_info,
-                          current_index=0, total_count=admin_count,
-                          prefix='admin', apply_text='Добавить')
-
+            await show_object(call_mess, object_info=admin_info,
+                              current_index=0, total_count=admin_count,
+                              prefix='admin', apply_text='Добавить')
+        else:
+            await call_mess.answer('Пока нет ни одного админа', reply_markup=pag.add_first_object_kb)
     await asyncio.gather(inner_admin_list(), delete_message(call_mess))
+
+
+# Заготовка функции добавления админа, поскольку применяется не только в одном месте
+async def add_admin(call_mess: Message | CallbackQuery, state: FSMContext):
+    call_mess = call_mess.message if isinstance(call_mess, CallbackQuery) else call_mess
+    spec_list = await db_req.get_specializations()
+    text = ''
+    for i, item in enumerate(spec_list):
+        text += f'<b>{i + 1}.</b> {item.department}: <i>{item.title}</i>\n'
+    await call_mess.answer(f'Специальности:\n{text}\n'
+                           f'Для добавления админа и привязки его к специальности из списка '
+                           f'выше наберите и отправьте сообщение боту в следующем формате:\n'
+                           f'<i>порядковый номер специальности / никнейм</i>\n'
+                           f'<b><i>Пример</i></b>: 3/ivan2005',
+                           reply_markup=await kb_adm.return_back_kb(
+                               'Отменить ⛔️',
+                               'return:admin_list')
+                           )
+    await state.update_data(spec_list=spec_list)
+    await state.set_state(st.EditAdmin.add_admin)
+
+
+@adm.callback_query(F.data=='add_first_admin')
+async def add_first_admin(call: CallbackQuery, state: FSMContext):
+    await asyncio.gather(add_admin(call, state), delete_message(call.message))
+
 
 ''' Пагинация админов '''
 
@@ -188,24 +216,9 @@ async def admin_pagination(callback_query: CallbackQuery, state: FSMContext):
                                          prefix='admin',apply_text='Добавить')
         await asyncio.gather(delete_message(callback_query.message), inner_admin_pagination())
 
-
     # Обработчик события добавления админа
     if callback_query.data == 'apply_admin':
-        async def add_admin():
-            spec_list = await db_req.get_specializations()
-            text = ''
-            for i, item in enumerate(spec_list):
-                text += f'<b>{i+1}.</b> {item.department}: <i>{item.title}</i>\n'
-            await callback_query.message.answer(f'Специальности:\n{text}\n'
-                                                f'Для добавления админа и привязки его к специальности из списка '
-                                                f'выше наберите и отправьте сообщение боту в следующем формате:\n'
-                                                f'<i>порядковый номер специальности / никнейм</i>\n'
-                                                f'<b><i>Пример</i></b>: 3/ivan2005',
-                                                reply_markup=await kb_adm.return_back_kb('Отменить ⛔️',
-                                                                                         'return:admin_list'))
-            await state.update_data(spec_list=spec_list)
-            await state.set_state(st.EditAdmin.add_admin)
-        await asyncio.gather(add_admin(), delete_message(callback_query.message))
+        await asyncio.gather(add_admin(callback_query, state), delete_message(callback_query.message))
 
     # Обработчик события удаления админа
     elif callback_query.data == 'delete_admin':
@@ -462,4 +475,4 @@ async def adm_test(message: Message):
 @adm.message(Command('test'))
 async def test_call(message: Message, is_simple_admin: bool):
 
-    print(is_simple_admin)
+    print(simple_admins)
