@@ -133,7 +133,8 @@ async def start(call_mess: Message | CallbackQuery, state: FSMContext):
 
 # Админ панель
 @user.message(Command('adm'))
-async def adm(message: Message):
+async def adm(message: Message, state: FSMContext):
     async def answer():
+        await state.clear()
         await message.answer('Админ-панель', reply_markup=admin_panel_kb)
     await asyncio.gather(delete_message(message), answer())

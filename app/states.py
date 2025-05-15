@@ -54,7 +54,6 @@ class CreateCategoryFSM(StatesGroup):
 
 class CreateQuestionFSM(StatesGroup):
     category = State()
-    animal = State()
     text = State()
     answers = State()
     correct_answer = State()

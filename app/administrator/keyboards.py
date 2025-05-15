@@ -21,11 +21,11 @@ admin_list_panel_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 # Кнопка для вставки шаблона вопроса
 async def question_template_kb() -> InlineKeyboardMarkup:
-    template = ('Текст вопроса:\n\n'
-                'Варианты ответов:\n'
-                '-')
+    template = ('Напишите текст вопроса:\n\n'
+                'Варианты ответов через слеш:\n'
+                'Номер правильного варианта (отсчет слева):')
     question_template_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Шаблон вопроса', switch_inline_query_current_chat=template)]
+        [InlineKeyboardButton(text='Вставить шаблон', switch_inline_query_current_chat=template)]
     ])
 
     return question_template_kb

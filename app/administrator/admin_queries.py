@@ -49,7 +49,7 @@ class AdminMiddleware(BaseMiddleware):
 
             data["is_admin"] = user_cache[user_tg_id].is_admin
             data["is_simple_admin"] = True if user_tg_id in simple_admins else False
-
+            print(f'data["is_simple_admin"]: {data["is_simple_admin"]}')
 
         #             if isinstance(event, CallbackQuery) and event.data == "registration":
         #                 print(51)
@@ -166,7 +166,8 @@ async def admin_list(call_mess: CallbackQuery | Message, state: FSMContext):
                                          f' Специальность: <i>{item.specialization.title}</i>\n'
                                          f' Кафедра: <i>{item.specialization.department}</i>'}
                           for item in admin_spec]
-            admin_id, admin_info, admin_count,  = admin_list[0]['admin_id'],  admin_list[0]['admin_info'], len(admin_list)
+            admin_id, admin_info, admin_count,  = (admin_list[0]['admin_id'],
+                                                   admin_list[0]['admin_info'], len(admin_list))
 
             await state.update_data(admin_list=admin_list, current_index=0,
                                     total_count=admin_count, admin_id=admin_id)
@@ -287,25 +288,52 @@ async def add_admin_state(message: Message, state: FSMContext):
 ''' СОЗДАНИЕ ВОПРОСA '''
 
 @adm.callback_query(F.data=='add_question')
-async def add_question_begin(call: CallbackQuery, state: FSMContext, is_simple_admin: bool, is_admin: bool):
-    async def inner_add_question_begin():
-        await state.clear()
-        if is_simple_admin is False and is_admin is False:
-            await call.message.answer('У Вас нет прав на совершение данной операции')
-            return
+async def add_question_begin(call: CallbackQuery, state: FSMContext, is_simple_admin: bool):
+    if is_simple_admin:
+        async def inner_add_question_begin():
+                specializations = await db_req.get_specializations(call.from_user.id)
+                text = ''
+                for i, specialization in enumerate(specializations):
+                    text += (f'<b>{i+1}</b>. <i>Специальность</i>: {specialization.specialization.title}\n'
+                             f'<i>Кафедра</i>: {specialization.specialization.department}\n\n')
 
-        specializations = await db_req.get_specializations(call.from_user.id)
-        text = ''
-        for i, specialization in enumerate(specializations):
-            text += (f'<b>{i+1}</b>. <i>Специальность</i>: {specialization.specialization.title}\n'
-                     f'<i>Кафедра</i>: {specialization.specialization.department}\n\n')
+                await call.message.answer (
+                    f'Укажите порядковый номер специальности, к которой хотите '
+                    f'привязать вопрос викторины:\n'
+                    f'{text}')
+                await state.update_data(specializations=specializations)
+                await state.set_state(st.CreateQuestionFSM.text)
+        await asyncio.gather(delete_message(call.message), inner_add_question_begin())
 
-        await call.message.answer (
-            f'Укажите порядковый номер специальности, к которой хотите '
-            f'привязать вопрос викторины:\n'
-            f'{text}')
-        await state.update_data(specializations=specializations)
-    await asyncio.gather(delete_message(call.message), inner_add_question_begin())
+    else:
+        await call.message.answer('У Вас нет прав на совершение данной операции')
+        return
+
+
+@adm.message(st.CreateQuestionFSM.text)
+async def add_question_text(message: Message, state: FSMContext):
+    try:
+        tg_id, index = message.from_user.id, int(message.text) - 1
+        data = await state.get_data()
+        specializations = data['specializations']
+        print(f'specializations: {specializations}\n')
+        spec_id = specializations[index]
+        await state.update_data(spec_id=spec_id)
+        await message.answer('Нажмите на кнопку вставки шаблона и заполните поля вопроса.\n\n'
+                             '<b>ПРИМЕР ЗАПОЛНЕНИЯ ШАБЛОНА</b>\n'
+                             '"<b><i>Напишите текст вопроса</i></b>: Что из перечисленного относится к фруктам?\n'
+                             '<b><i>Варианты ответов через слеш</i></b>: огурец/яблоко/хлеб/творог\n'
+                             '<b><i>Номер правильного варианта (отсчет слева)</i></b>: 2"',
+                             reply_markup=await kb_adm.question_template_kb(),
+                             parse_mode='HTML')
+        return
+
+    except ValueError:
+        text = 'Нарушен формат ввода. Нужно вводить целое значение'
+    except IndexError:
+        text = 'Такого порядкового номера специальности нет в списке'
+    await message.answer (text)
+
 
 ''' Пагинация категории и выбор категории. Здесь важно отметить, что
 не удалось разделить пагинацию и apply_category '''
@@ -336,26 +364,6 @@ async def category_pagination(callback_query: CallbackQuery, state: FSMContext):
                           prefix='animal', apply_text='Принять животное')
         await state.update_data(animal_list=animal_list, animal=animal,
                                 current_index=0, total_count=len(animal_list))
-        await state.set_state(st.CreateQuestionFSM.animal)
-
-
-@adm.callback_query(PaginationCallbackData.filter(F.call_prefix.startswith('animal'))
-                    and st.CreateQuestionFSM.animal)
-async def category_pagination(callback_query: CallbackQuery, state: FSMContext):
-    if callback_query.data.startswith('pagination'):
-        await pagination_handler(
-            callback_query, state=state,
-            prefix='animal', apply_text='Принять животное'
-        )
-    if callback_query.data == 'apply_animal':
-        try:
-            data = await state.get_data()
-            animal = data.get('animal')
-            await callback_query.message.answer(f'Выбрано животное: {animal}.\n'
-                                                f'Теперь введите текст вопроса:')
-            await state.set_state(st.CreateQuestionFSM.text)
-        except Exception as e:
-            logger.error(f'ERROR = {e}')
 @adm.message(st.CreateQuestionFSM.text)
 async def add_question_text(message: Message, state: FSMContext):
     await state.update_data(text=message.text)
@@ -475,4 +483,5 @@ async def adm_test(message: Message):
 @adm.message(Command('test'))
 async def test_call(message: Message, is_simple_admin: bool):
 
-    print(simple_admins)
+    print(f'simple_admins = {simple_admins}\n'
+          f'is_simple_admin = {is_simple_admin}')

@@ -200,6 +200,9 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 *.sqlite3
+db.sqlite3-shm
+db.sqlite3-wal
+
 
 # Flask stuff:
 instance/
